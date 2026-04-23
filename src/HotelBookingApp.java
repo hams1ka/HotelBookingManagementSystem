@@ -345,3 +345,97 @@ class UseCase5BookingRequestQueue {
         System.out.println("Next to be processed   : " + queue.peek());
     }
 }
+// ============================================================
+// UC6: Reservation Confirmation & Room Allocation
+// Concepts: Set (uniqueness), HashMap<String,Set<String>>,
+//           Atomic allocation, Inventory synchronization
+// ============================================================
+
+// Room Allocation Service — assigns unique room IDs
+class RoomAllocationService {
+    // Set ensures no room ID is assigned twice (prevents double-booking)
+    private Set<String> allocatedRoomIds;
+
+    // Maps room type -> set of assigned room IDs
+    private HashMap<String, Set<String>> roomTypeAllocations;
+
+    private RoomInventory inventory;
+    private int roomCounter = 1;
+
+    public RoomAllocationService(RoomInventory inventory) {
+        this.inventory           = inventory;
+        this.allocatedRoomIds    = new HashSet<>();
+        this.roomTypeAllocations = new HashMap<>();
+    }
+
+    // Allocate a room for a reservation
+    public String allocateRoom(Reservation reservation) {
+        String roomType = reservation.getRoomType();
+
+        // Check availability before allocating
+        if (inventory.getAvailability(roomType) <= 0) {
+            System.out.println("[FAILED] No rooms available for: " + roomType);
+            return null;
+        }
+
+        // Generate unique room ID
+        String roomId = roomType.toUpperCase().substring(0, 3) + "-" + String.format("%03d", roomCounter++);
+
+        // Ensure uniqueness using Set
+        if (allocatedRoomIds.contains(roomId)) {
+            System.out.println("[FAILED] Room ID already exists: " + roomId);
+            return null;
+        }
+
+        // Record the allocation
+        allocatedRoomIds.add(roomId);
+        roomTypeAllocations.computeIfAbsent(roomType, k -> new HashSet<>()).add(roomId);
+
+        // Decrement inventory immediately
+        inventory.decrementAvailability(roomType);
+
+        System.out.println("[CONFIRMED] " + reservation.getGuestName() +
+                           " -> Room: " + roomId +
+                           " | Reservation: " + reservation.getReservationId());
+        return roomId;
+    }
+
+    public void displayAllocations() {
+        System.out.println("\n--- Room Allocations ---");
+        for (Map.Entry<String, Set<String>> entry : roomTypeAllocations.entrySet()) {
+            System.out.println(entry.getKey() + " : " + entry.getValue());
+        }
+    }
+
+    public Set<String> getAllocatedRoomIds() { return allocatedRoomIds; }
+}
+
+class UseCase6RoomAllocationService {
+    public static void main(String[] args) {
+        System.out.println("============================================");
+        System.out.println("   Book My Stay App  v6.0");
+        System.out.println("   Reservation Confirmation & Allocation");
+        System.out.println("============================================");
+
+        // Setup inventory and queue
+        RoomInventory inventory = new RoomInventory();
+        BookingRequestQueue queue = new BookingRequestQueue();
+        RoomAllocationService allocationService = new RoomAllocationService(inventory);
+
+        // Add booking requests
+        queue.addRequest(new Reservation("Hamsika",     "Single", 2));
+        queue.addRequest(new Reservation("Ayush",       "Double", 3));
+        queue.addRequest(new Reservation("Tirthapooja", "Suite",  1));
+
+        // Process requests in FIFO order
+        System.out.println("\n[Processing Queue]");
+        while (!queue.isEmpty()) {
+            Reservation r = queue.poll();
+            allocationService.allocateRoom(r);
+        }
+
+        // Show allocations and updated inventory
+        allocationService.displayAllocations();
+        inventory.displayInventory();
+    }
+}
