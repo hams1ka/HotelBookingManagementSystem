@@ -1,6 +1,7 @@
 // FILE: HotelBookingApp.java
 // Hotel Booking Management System - Base Setup
 
+import java.io.*;
 import java.util.*;
 
 // ============================================================
