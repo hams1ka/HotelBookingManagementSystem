@@ -805,3 +805,94 @@ class UseCase10BookingCancellation {
         cs.displayReleasedRooms();
     }
 }
+// ============================================================
+// UC11: Concurrent Booking Simulation (Thread Safety)
+// Concepts: Race conditions, Thread safety, Shared mutable state,
+//           Critical sections, Synchronized access
+// ============================================================
+
+// Thread-safe booking processor
+class ConcurrentBookingProcessor {
+    private RoomInventory inventory;
+    private Set<String> allocatedRoomIds;
+    private int roomCounter = 1;
+
+    public ConcurrentBookingProcessor(RoomInventory inventory) {
+        this.inventory        = inventory;
+        this.allocatedRoomIds = new HashSet<>();
+    }
+
+    // Synchronized method — only one thread can execute at a time
+    public synchronized void processBooking(Reservation reservation) {
+        String roomType = reservation.getRoomType();
+
+        // Critical section: check and update inventory atomically
+        if (inventory.getAvailability(roomType) <= 0) {
+            System.out.println("[THREAD " + Thread.currentThread().getName() +
+                               "] FAILED - No rooms for: " + roomType);
+            return;
+        }
+
+        // Generate unique room ID
+        String roomId = roomType.toUpperCase().substring(0, 3) +
+                        "-" + String.format("%03d", roomCounter++);
+
+        // Allocate and update inventory
+        allocatedRoomIds.add(roomId);
+        inventory.decrementAvailability(roomType);
+
+        System.out.println("[THREAD " + Thread.currentThread().getName() +
+                           "] CONFIRMED: " + reservation.getGuestName() +
+                           " -> " + roomId);
+    }
+}
+
+// Booking thread — simulates a guest submitting a request
+class BookingThread extends Thread {
+    private ConcurrentBookingProcessor processor;
+    private Reservation reservation;
+
+    public BookingThread(String name, ConcurrentBookingProcessor processor,
+                         Reservation reservation) {
+        super(name);
+        this.processor   = processor;
+        this.reservation = reservation;
+    }
+
+    @Override
+    public void run() {
+        processor.processBooking(reservation);
+    }
+}
+
+class UseCase11ConcurrentBookingSimulation {
+    public static void main(String[] args) throws InterruptedException {
+        System.out.println("============================================");
+        System.out.println("   Book My Stay App  v11.0");
+        System.out.println("   Concurrent Booking Simulation");
+        System.out.println("============================================");
+
+        RoomInventory inventory = new RoomInventory();
+        ConcurrentBookingProcessor processor = new ConcurrentBookingProcessor(inventory);
+
+        System.out.println("\n[Launching Concurrent Booking Threads]");
+
+        // Create multiple threads simulating simultaneous guest bookings
+        Thread[] threads = {
+            new BookingThread("Guest-1", processor, new Reservation("Hamsika",     "Single", 2)),
+            new BookingThread("Guest-2", processor, new Reservation("Ayush",       "Single", 1)),
+            new BookingThread("Guest-3", processor, new Reservation("Tirthapooja", "Double", 3)),
+            new BookingThread("Guest-4", processor, new Reservation("Ravi",        "Suite",  1)),
+            new BookingThread("Guest-5", processor, new Reservation("Priya",       "Single", 2))
+        };
+
+        // Start all threads simultaneously
+        for (Thread t : threads) t.start();
+
+        // Wait for all threads to finish
+        for (Thread t : threads) t.join();
+
+        System.out.println("\n[All threads completed]");
+        inventory.displayInventory();
+    }
+}
