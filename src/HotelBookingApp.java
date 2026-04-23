@@ -439,3 +439,84 @@ class UseCase6RoomAllocationService {
         inventory.displayInventory();
     }
 }
+// ============================================================
+// UC7: Add-On Service Selection
+// Concepts: One-to-many relationship, Map<String,List<Service>>,
+//           Composition, Cost aggregation
+// ============================================================
+
+// Add-On Service — represents an optional hotel service
+class AddOnService {
+    private String serviceName;
+    private double cost;
+
+    public AddOnService(String serviceName, double cost) {
+        this.serviceName = serviceName;
+        this.cost        = cost;
+    }
+
+    public String getServiceName() { return serviceName; }
+    public double getCost()        { return cost; }
+
+    @Override
+    public String toString() {
+        return serviceName + " (Rs." + cost + ")";
+    }
+}
+
+// Add-On Service Manager — maps reservation IDs to selected services
+class AddOnServiceManager {
+    // One reservation -> many services
+    private HashMap<String, List<AddOnService>> reservationServices;
+
+    public AddOnServiceManager() {
+        reservationServices = new HashMap<>();
+    }
+
+    // Add a service to a reservation
+    public void addService(String reservationId, AddOnService service) {
+        reservationServices.computeIfAbsent(reservationId, k -> new ArrayList<>()).add(service);
+        System.out.println("[Service Added] " + reservationId + " -> " + service);
+    }
+
+    // Calculate total add-on cost for a reservation
+    public double getTotalAddOnCost(String reservationId) {
+        List<AddOnService> services = reservationServices.getOrDefault(reservationId, new ArrayList<>());
+        double total = 0;
+        for (AddOnService s : services) { total += s.getCost(); }
+        return total;
+    }
+
+    // Display all services for a reservation
+    public void displayServices(String reservationId) {
+        System.out.println("\n--- Add-On Services for " + reservationId + " ---");
+        List<AddOnService> services = reservationServices.getOrDefault(reservationId, new ArrayList<>());
+        if (services.isEmpty()) {
+            System.out.println("No add-on services selected.");
+            return;
+        }
+        for (AddOnService s : services) { System.out.println("  -> " + s); }
+        System.out.println("Total Add-On Cost: Rs." + getTotalAddOnCost(reservationId));
+    }
+}
+
+class UseCase7AddOnServiceSelection {
+    public static void main(String[] args) {
+        System.out.println("============================================");
+        System.out.println("   Book My Stay App  v7.0");
+        System.out.println("   Add-On Service Selection");
+        System.out.println("============================================");
+
+        AddOnServiceManager serviceManager = new AddOnServiceManager();
+
+        // Simulate guest adding services to their reservation
+        String resId = "RES-001";
+        System.out.println("\n[Guest selecting add-ons for " + resId + "]");
+        serviceManager.addService(resId, new AddOnService("Airport Pickup",  800.0));
+        serviceManager.addService(resId, new AddOnService("Breakfast Plan",  500.0));
+        serviceManager.addService(resId, new AddOnService("Spa Package",    1500.0));
+
+        // Display selected services and total cost
+        serviceManager.displayServices(resId);
+    }
+}
