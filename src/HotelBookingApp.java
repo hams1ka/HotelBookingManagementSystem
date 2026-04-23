@@ -520,3 +520,92 @@ class UseCase7AddOnServiceSelection {
         serviceManager.displayServices(resId);
     }
 }
+// ============================================================
+// UC8: Booking History & Reporting
+// Concepts: List (ordered storage), Historical tracking,
+//           Reporting service, Persistence mindset
+// ============================================================
+
+// Booking History — stores confirmed reservations in order
+class BookingHistory {
+    // List preserves insertion order — natural chronological record
+    private List<Reservation> history;
+
+    public BookingHistory() {
+        history = new ArrayList<>();
+    }
+
+    // Add a confirmed reservation to history
+    public void addToHistory(Reservation reservation) {
+        history.add(reservation);
+        System.out.println("[History Recorded] " + reservation);
+    }
+
+    // Retrieve all bookings
+    public List<Reservation> getAllBookings() { return history; }
+
+    // Display full booking history
+    public void displayHistory() {
+        System.out.println("\n--- Booking History ---");
+        if (history.isEmpty()) {
+            System.out.println("No bookings recorded.");
+            return;
+        }
+        int index = 1;
+        for (Reservation r : history) {
+            System.out.println(index++ + ". " + r);
+        }
+    }
+}
+
+// Booking Report Service — generates summaries from history
+class BookingReportService {
+    private BookingHistory history;
+
+    public BookingReportService(BookingHistory history) {
+        this.history = history;
+    }
+
+    // Generate a simple summary report
+    public void generateReport() {
+        System.out.println("\n========== Booking Report ==========");
+        List<Reservation> bookings = history.getAllBookings();
+        System.out.println("Total Bookings : " + bookings.size());
+
+        // Count by room type
+        HashMap<String, Integer> countByType = new HashMap<>();
+        for (Reservation r : bookings) {
+            countByType.merge(r.getRoomType(), 1, Integer::sum);
+        }
+        System.out.println("Bookings by Room Type:");
+        for (Map.Entry<String, Integer> e : countByType.entrySet()) {
+            System.out.println("  " + e.getKey() + " : " + e.getValue());
+        }
+        System.out.println("=====================================");
+    }
+}
+
+class UseCase8BookingHistoryReport {
+    public static void main(String[] args) {
+        System.out.println("============================================");
+        System.out.println("   Book My Stay App  v8.0");
+        System.out.println("   Booking History & Reporting");
+        System.out.println("============================================");
+
+        BookingHistory history = new BookingHistory();
+
+        // Simulate confirmed reservations being recorded
+        System.out.println("\n[Recording Confirmed Bookings]");
+        history.addToHistory(new Reservation("Hamsika",     "Single", 2));
+        history.addToHistory(new Reservation("Ayush",       "Double", 3));
+        history.addToHistory(new Reservation("Tirthapooja", "Suite",  1));
+        history.addToHistory(new Reservation("Ravi",        "Single", 1));
+
+        // Display history
+        history.displayHistory();
+
+        // Generate report
+        BookingReportService reportService = new BookingReportService(history);
+        reportService.generateReport();
+    }
+}
