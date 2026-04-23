@@ -708,3 +708,100 @@ class UseCase9ErrorHandlingValidation {
         System.out.println("\n[System stable after all error scenarios]");
     }
 }
+// ============================================================
+// UC10: Booking Cancellation & Inventory Rollback
+// Concepts: Stack (LIFO), State reversal, Controlled mutation,
+//           Inventory restoration, Rollback validation
+// ============================================================
+
+// Cancellation Service — handles booking cancellations
+class CancellationService {
+    // Stack tracks recently released room IDs (LIFO rollback)
+    private Stack<String> releasedRoomIds;
+    private RoomInventory inventory;
+    private BookingHistory history;
+
+    // Active bookings: reservationId -> roomId
+    private HashMap<String, String> activeBookings;
+
+    public CancellationService(RoomInventory inventory, BookingHistory history) {
+        this.inventory       = inventory;
+        this.history         = history;
+        this.releasedRoomIds = new Stack<>();
+        this.activeBookings  = new HashMap<>();
+    }
+
+    // Register a confirmed booking
+    public void registerBooking(String reservationId, String roomId, String roomType) {
+        activeBookings.put(reservationId, roomId + ":" + roomType);
+        System.out.println("[Registered] " + reservationId + " -> " + roomId);
+    }
+
+    // Cancel a booking and rollback inventory
+    public void cancelBooking(String reservationId) {
+        // Validate booking exists
+        if (!activeBookings.containsKey(reservationId)) {
+            System.out.println("[FAILED] Reservation not found: " + reservationId);
+            return;
+        }
+
+        String[] parts    = activeBookings.get(reservationId).split(":");
+        String roomId     = parts[0];
+        String roomType   = parts[1];
+
+        // Push released room ID onto stack (LIFO rollback tracking)
+        releasedRoomIds.push(roomId);
+
+        // Restore inventory
+        inventory.incrementAvailability(roomType);
+
+        // Remove from active bookings
+        activeBookings.remove(reservationId);
+
+        System.out.println("[CANCELLED] Reservation: " + reservationId +
+                           " | Room: " + roomId + " released.");
+        System.out.println("[INVENTORY RESTORED] " + roomType +
+                           " now has " + inventory.getAvailability(roomType) + " rooms.");
+    }
+
+    public void displayReleasedRooms() {
+        System.out.println("\n--- Released Room IDs (Stack) ---");
+        System.out.println(releasedRoomIds);
+    }
+}
+
+class UseCase10BookingCancellation {
+    public static void main(String[] args) {
+        System.out.println("============================================");
+        System.out.println("   Book My Stay App  v10.0");
+        System.out.println("   Booking Cancellation & Inventory Rollback");
+        System.out.println("============================================");
+
+        RoomInventory inventory  = new RoomInventory();
+        BookingHistory history   = new BookingHistory();
+        CancellationService cs   = new CancellationService(inventory, history);
+
+        // Register some bookings
+        System.out.println("\n[Registering Bookings]");
+        cs.registerBooking("RES-001", "SIN-001", "Single");
+        cs.registerBooking("RES-002", "DOU-001", "Double");
+        cs.registerBooking("RES-003", "SUI-001", "Suite");
+
+        // Show inventory before cancellation
+        inventory.displayInventory();
+
+        // Cancel a booking
+        System.out.println("\n[Cancelling RES-002]");
+        cs.cancelBooking("RES-002");
+
+        // Try cancelling non-existent booking
+        System.out.println("\n[Cancelling non-existent RES-999]");
+        cs.cancelBooking("RES-999");
+
+        // Show inventory after cancellation
+        inventory.displayInventory();
+
+        // Show released rooms stack
+        cs.displayReleasedRooms();
+    }
+}
