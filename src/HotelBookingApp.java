@@ -609,3 +609,102 @@ class UseCase8BookingHistoryReport {
         reportService.generateReport();
     }
 }
+// ============================================================
+// UC9: Error Handling & Validation
+// Concepts: Custom exceptions, Input validation,
+//           Fail-fast design, Graceful failure
+// ============================================================
+
+// Custom exception for invalid room type
+class InvalidRoomTypeException extends Exception {
+    public InvalidRoomTypeException(String message) {
+        super(message);
+    }
+}
+
+// Custom exception for unavailable rooms
+class RoomNotAvailableException extends Exception {
+    public RoomNotAvailableException(String message) {
+        super(message);
+    }
+}
+
+// Validator — validates input before processing
+class InvalidBookingValidator {
+    private static final List<String> VALID_ROOM_TYPES =
+        Arrays.asList("Single", "Double", "Suite");
+
+    // Validate room type (case-sensitive)
+    public static void validateRoomType(String roomType) throws InvalidRoomTypeException {
+        if (!VALID_ROOM_TYPES.contains(roomType)) {
+            throw new InvalidRoomTypeException(
+                "Invalid room type: '" + roomType + "'. Valid types: " + VALID_ROOM_TYPES);
+        }
+    }
+
+    // Validate availability
+    public static void validateAvailability(String roomType, int available)
+            throws RoomNotAvailableException {
+        if (available <= 0) {
+            throw new RoomNotAvailableException(
+                "No rooms available for type: " + roomType);
+        }
+    }
+
+    // Validate number of nights
+    public static void validateNights(int nights) throws IllegalArgumentException {
+        if (nights <= 0) {
+            throw new IllegalArgumentException(
+                "Number of nights must be greater than 0. Provided: " + nights);
+        }
+    }
+}
+
+class UseCase9ErrorHandlingValidation {
+    public static void main(String[] args) {
+        System.out.println("============================================");
+        System.out.println("   Book My Stay App  v9.0");
+        System.out.println("   Error Handling & Validation");
+        System.out.println("============================================");
+
+        RoomInventory inventory = new RoomInventory();
+
+        // Test 1: Invalid room type
+        System.out.println("\n[Test 1: Invalid Room Type]");
+        try {
+            InvalidBookingValidator.validateRoomType("Penthouse"); // Invalid
+        } catch (InvalidRoomTypeException e) {
+            System.out.println("[ERROR] " + e.getMessage());
+        }
+
+        // Test 2: Valid room type
+        System.out.println("\n[Test 2: Valid Room Type]");
+        try {
+            InvalidBookingValidator.validateRoomType("Single"); // Valid
+            System.out.println("[OK] Room type is valid.");
+        } catch (InvalidRoomTypeException e) {
+            System.out.println("[ERROR] " + e.getMessage());
+        }
+
+        // Test 3: Room not available
+        System.out.println("\n[Test 3: Room Not Available]");
+        try {
+            // Make Suite unavailable
+            inventory.decrementAvailability("Suite");
+            inventory.decrementAvailability("Suite");
+            InvalidBookingValidator.validateAvailability("Suite", inventory.getAvailability("Suite"));
+        } catch (RoomNotAvailableException e) {
+            System.out.println("[ERROR] " + e.getMessage());
+        }
+
+        // Test 4: Invalid nights
+        System.out.println("\n[Test 4: Invalid Number of Nights]");
+        try {
+            InvalidBookingValidator.validateNights(-1);
+        } catch (IllegalArgumentException e) {
+            System.out.println("[ERROR] " + e.getMessage());
+        }
+
+        System.out.println("\n[System stable after all error scenarios]");
+    }
+}
