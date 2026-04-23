@@ -2,7 +2,6 @@
 // Hotel Booking Management System - Base Setup
 
 import java.util.*;
-import java.io.*;
 
 // ============================================================
 // UC1: Application Entry & Welcome Message
@@ -255,5 +254,94 @@ class UseCase4RoomSearch {
         // Search service reads inventory without modifying it
         RoomSearchService searchService = new RoomSearchService(inventory);
         searchService.searchAvailableRooms();
+    }
+}
+// ============================================================
+// UC5: Booking Request Queue (First-Come-First-Served)
+// Concepts: Queue, FIFO, Fairness, Request ordering,
+//           Decoupling intake from allocation
+// ============================================================
+
+// Reservation — represents a guest's booking intent
+class Reservation {
+    private String guestName;
+    private String roomType;
+    private int nights;
+    private String reservationId;
+
+    public Reservation(String guestName, String roomType, int nights) {
+        this.guestName     = guestName;
+        this.roomType      = roomType;
+        this.nights        = nights;
+        // Generate simple reservation ID
+        this.reservationId = "RES-" + System.currentTimeMillis();
+    }
+
+    public String getGuestName()     { return guestName; }
+    public String getRoomType()      { return roomType; }
+    public int getNights()           { return nights; }
+    public String getReservationId() { return reservationId; }
+
+    @Override
+    public String toString() {
+        return "[" + reservationId + "] " + guestName + " | " + roomType + " | " + nights + " night(s)";
+    }
+}
+
+// Booking queue — stores requests in FIFO order
+class BookingRequestQueue {
+    // Queue preserves arrival order (FIFO)
+    private Queue<Reservation> requestQueue;
+
+    public BookingRequestQueue() {
+        requestQueue = new LinkedList<>();
+    }
+
+    // Add a new booking request to the end of the queue
+    public void addRequest(Reservation reservation) {
+        requestQueue.add(reservation);
+        System.out.println("[Queued] " + reservation);
+    }
+
+    // Peek at next request without removing
+    public Reservation peek() { return requestQueue.peek(); }
+
+    // Remove and return the front request (FIFO)
+    public Reservation poll() { return requestQueue.poll(); }
+
+    public boolean isEmpty()  { return requestQueue.isEmpty(); }
+    public int size()         { return requestQueue.size(); }
+
+    public void displayQueue() {
+        System.out.println("\n--- Booking Request Queue ---");
+        if (requestQueue.isEmpty()) {
+            System.out.println("Queue is empty.");
+            return;
+        }
+        for (Reservation r : requestQueue) {
+            System.out.println(r);
+        }
+    }
+}
+
+class UseCase5BookingRequestQueue {
+    public static void main(String[] args) {
+        System.out.println("============================================");
+        System.out.println("   Book My Stay App  v5.0");
+        System.out.println("   Booking Request Queue (FIFO)");
+        System.out.println("============================================");
+
+        BookingRequestQueue queue = new BookingRequestQueue();
+
+        // Simulate guests submitting booking requests
+        System.out.println("\n[Guests Submitting Requests]");
+        queue.addRequest(new Reservation("Hamsika",  "Single", 2));
+        queue.addRequest(new Reservation("Ayush",    "Double", 3));
+        queue.addRequest(new Reservation("Tirthapooja", "Suite", 1));
+
+        // Display queued requests
+        queue.displayQueue();
+        System.out.println("\nTotal requests in queue: " + queue.size());
+        System.out.println("Next to be processed   : " + queue.peek());
     }
 }
