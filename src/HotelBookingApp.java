@@ -896,3 +896,136 @@ class UseCase11ConcurrentBookingSimulation {
         inventory.displayInventory();
     }
 }
+// ============================================================
+// UC12: Data Persistence & System Recovery
+// Concepts: Serialization, Deserialization, File I/O,
+//           Inventory snapshot, Failure tolerance
+// ============================================================
+
+// Persistence Service — saves and restores system state
+class PersistenceService {
+    private static final String INVENTORY_FILE = "inventory_state.txt";
+    private static final String HISTORY_FILE   = "booking_history.txt";
+
+    // Save inventory state to file
+    public void saveInventory(RoomInventory inventory) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(INVENTORY_FILE))) {
+            for (Map.Entry<String, Integer> entry : inventory.getInventory().entrySet()) {
+                writer.write(entry.getKey() + "=" + entry.getValue());
+                writer.newLine();
+            }
+            System.out.println("[SAVED] Inventory state saved to " + INVENTORY_FILE);
+        } catch (IOException e) {
+            System.out.println("[ERROR] Failed to save inventory: " + e.getMessage());
+        }
+    }
+
+    // Restore inventory state from file
+    public void restoreInventory(RoomInventory inventory) {
+        File file = new File(INVENTORY_FILE);
+        if (!file.exists()) {
+            System.out.println("[RECOVERY] No saved inventory found. Using default state.");
+            return;
+        }
+        try (BufferedReader reader = new BufferedReader(new FileReader(INVENTORY_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("=");
+                if (parts.length == 2) {
+                    String roomType = parts[0];
+                    int count       = Integer.parseInt(parts[1]);
+                    // Restore: set correct count
+                    int current = inventory.getAvailability(roomType);
+                    for (int i = 0; i < current; i++) inventory.decrementAvailability(roomType);
+                    for (int i = 0; i < count; i++)   inventory.incrementAvailability(roomType);
+                }
+            }
+            System.out.println("[RESTORED] Inventory state loaded from " + INVENTORY_FILE);
+        } catch (IOException e) {
+            System.out.println("[ERROR] Failed to restore inventory: " + e.getMessage());
+        }
+    }
+
+    // Save booking history to file
+    public void saveBookingHistory(BookingHistory history) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(HISTORY_FILE))) {
+            for (Reservation r : history.getAllBookings()) {
+                writer.write(r.getReservationId() + "|" +
+                             r.getGuestName()     + "|" +
+                             r.getRoomType()      + "|" +
+                             r.getNights());
+                writer.newLine();
+            }
+            System.out.println("[SAVED] Booking history saved to " + HISTORY_FILE);
+        } catch (IOException e) {
+            System.out.println("[ERROR] Failed to save history: " + e.getMessage());
+        }
+    }
+
+    // Restore booking history from file
+    public void restoreBookingHistory(BookingHistory history) {
+        File file = new File(HISTORY_FILE);
+        if (!file.exists()) {
+            System.out.println("[RECOVERY] No saved booking history found.");
+            return;
+        }
+        try (BufferedReader reader = new BufferedReader(new FileReader(HISTORY_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\\|");
+                if (parts.length == 4) {
+                    Reservation r = new Reservation(parts[1], parts[2],
+                                                    Integer.parseInt(parts[3]));
+                    history.addToHistory(r);
+                }
+            }
+            System.out.println("[RESTORED] Booking history loaded from " + HISTORY_FILE);
+        } catch (IOException e) {
+            System.out.println("[ERROR] Failed to restore history: " + e.getMessage());
+        }
+    }
+}
+
+class UseCase12DataPersistenceRecovery {
+    public static void main(String[] args) {
+        System.out.println("============================================");
+        System.out.println("   Book My Stay App  v12.0");
+        System.out.println("   Data Persistence & System Recovery");
+        System.out.println("============================================");
+
+        PersistenceService persistence = new PersistenceService();
+
+        // --- SIMULATE SYSTEM BEFORE SHUTDOWN ---
+        System.out.println("\n[Phase 1: System Running - Saving State]");
+        RoomInventory inventory   = new RoomInventory();
+        BookingHistory history    = new BookingHistory();
+
+        // Simulate some bookings
+        inventory.decrementAvailability("Single");
+        inventory.decrementAvailability("Double");
+        history.addToHistory(new Reservation("Hamsika", "Single", 2));
+        history.addToHistory(new Reservation("Ayush",   "Double", 3));
+
+        // Display state before saving
+        inventory.displayInventory();
+        history.displayHistory();
+
+        // Save state to files
+        persistence.saveInventory(inventory);
+        persistence.saveBookingHistory(history);
+
+        // --- SIMULATE SYSTEM RESTART ---
+        System.out.println("\n[Phase 2: System Restarted - Restoring State]");
+        RoomInventory recoveredInventory = new RoomInventory();
+        BookingHistory recoveredHistory  = new BookingHistory();
+
+        // Restore from files
+        persistence.restoreInventory(recoveredInventory);
+        persistence.restoreBookingHistory(recoveredHistory);
+
+        // Display recovered state
+        System.out.println("\n[Recovered State]");
+        recoveredInventory.displayInventory();
+        recoveredHistory.displayHistory();
+    }
+}
