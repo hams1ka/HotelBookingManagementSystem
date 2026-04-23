@@ -198,3 +198,62 @@ class UseCase3InventorySetup {
         roomInventory.displayInventory();
     }
 }
+// ============================================================
+// UC4: Room Search & Availability Check
+// Concepts: Read-only access, Defensive programming,
+//           Separation of concerns, Validation logic
+// ============================================================
+
+// Search service — read-only access to inventory and room info
+class RoomSearchService {
+    private RoomInventory inventory;
+    private List<Room> roomCatalog;
+
+    public RoomSearchService(RoomInventory inventory) {
+        this.inventory = inventory;
+        // Room catalog — all available room types
+        roomCatalog = new ArrayList<>();
+        roomCatalog.add(new SingleRoom());
+        roomCatalog.add(new DoubleRoom());
+        roomCatalog.add(new SuiteRoom());
+    }
+
+    // Display only rooms with availability > 0 (read-only, no state change)
+    public void searchAvailableRooms() {
+        System.out.println("\n--- Available Rooms ---");
+        boolean anyAvailable = false;
+        for (Room room : roomCatalog) {
+            int available = inventory.getAvailability(room.getRoomType());
+            if (available > 0) {
+                // Only show rooms that can actually be booked
+                room.displayRoomDetails();
+                System.out.println("Available  : " + available + " rooms");
+                System.out.println("------------------------------");
+                anyAvailable = true;
+            }
+        }
+        if (!anyAvailable) {
+            System.out.println("No rooms currently available.");
+        }
+    }
+}
+
+class UseCase4RoomSearch {
+    public static void main(String[] args) {
+        System.out.println("============================================");
+        System.out.println("   Book My Stay App  v4.0");
+        System.out.println("   Room Search & Availability Check");
+        System.out.println("============================================");
+
+        // Setup inventory
+        RoomInventory inventory = new RoomInventory();
+
+        // Simulate no suites available
+        inventory.decrementAvailability("Suite");
+        inventory.decrementAvailability("Suite");
+
+        // Search service reads inventory without modifying it
+        RoomSearchService searchService = new RoomSearchService(inventory);
+        searchService.searchAvailableRooms();
+    }
+}
