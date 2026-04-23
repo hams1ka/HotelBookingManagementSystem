@@ -128,3 +128,73 @@ class UseCase2RoomInitialization {
         System.out.println("Available  : " + suiteAvailable);
     }
 }
+// ============================================================
+// UC3: Centralized Room Inventory Management
+// Concepts: HashMap, O(1) lookup, Single source of truth,
+//           Encapsulation of inventory logic
+// Version: 3.0
+// ============================================================
+
+// Centralized inventory — stores room type -> available count
+class RoomInventory {
+    // HashMap: roomType -> number of available rooms
+    private HashMap<String, Integer> inventory;
+
+    // Initialize inventory with default room counts
+    public RoomInventory() {
+        inventory = new HashMap<>();
+        inventory.put("Single", 5);
+        inventory.put("Double", 3);
+        inventory.put("Suite",  2);
+    }
+
+    // Get availability for a specific room type
+    public int getAvailability(String roomType) {
+        return inventory.getOrDefault(roomType, 0);
+    }
+
+    // Decrement availability (called during booking)
+    public void decrementAvailability(String roomType) {
+        int current = getAvailability(roomType);
+        if (current > 0) {
+            inventory.put(roomType, current - 1);
+        }
+    }
+
+    // Increment availability (called during cancellation)
+    public void incrementAvailability(String roomType) {
+        inventory.put(roomType, getAvailability(roomType) + 1);
+    }
+
+    // Display full inventory
+    public void displayInventory() {
+        System.out.println("\n--- Current Room Inventory ---");
+        for (Map.Entry<String, Integer> entry : inventory.entrySet()) {
+            System.out.println(entry.getKey() + " : " + entry.getValue() + " rooms available");
+        }
+    }
+
+    public HashMap<String, Integer> getInventory() { return inventory; }
+}
+
+class UseCase3InventorySetup {
+    public static void main(String[] args) {
+        System.out.println("============================================");
+        System.out.println("   Book My Stay App  v3.0");
+        System.out.println("   Centralized Inventory Management");
+        System.out.println("============================================");
+
+        // Create centralized inventory
+        RoomInventory roomInventory = new RoomInventory();
+
+        // Display initial inventory
+        roomInventory.displayInventory();
+
+        // Simulate a booking — decrement Single room
+        System.out.println("\n[Booking] Reserving 1 Single room...");
+        roomInventory.decrementAvailability("Single");
+
+        // Display updated inventory
+        roomInventory.displayInventory();
+    }
+}
